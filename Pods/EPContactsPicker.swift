@@ -49,6 +49,8 @@ open class EPContactsPicker: UITableViewController, UISearchResultsUpdating, UIS
     var subtitleCellValue = SubtitleCellValue.phoneNumber
     var multiSelectEnabled: Bool = false //Default is single selection contact
     
+    var filterByEmail = false
+    
     // MARK: - Lifecycle Methods
     
     override open func viewDidLoad() {
@@ -129,6 +131,13 @@ open class EPContactsPicker: UITableViewController, UISearchResultsUpdating, UIS
         subtitleCellValue = subtitleCellType
     }
     
+    convenience public init(delegate: EPPickerDelegate?, multiSelection : Bool, subtitleCellType: SubtitleCellValue, filterByEmail emailFilter:Bool) {
+        self.init(style: .plain)
+        self.multiSelectEnabled = multiSelection
+        contactDelegate = delegate
+        subtitleCellValue = subtitleCellType
+        filterByEmail = emailFilter
+    }
     
     // MARK: - Contact Operations
   
@@ -186,20 +195,41 @@ open class EPContactsPicker: UITableViewController, UISearchResultsUpdating, UIS
                 
                 do {
                     try contactsStore?.enumerateContacts(with: contactFetchRequest, usingBlock: { (contact, stop) -> Void in
-                        //Ordering contacts based on alphabets in firstname
-                        contactsArray.append(contact)
-                        var key: String = "#"
-                        //If ordering has to be happening via family name change it here.
-                        if let firstLetter = contact.givenName[0..<1] , firstLetter.containsAlphabets() {
-                            key = firstLetter.uppercased()
-                        }
-                        var contacts = [CNContact]()
                         
-                        if let segregatedContact = self.orderedContacts[key] {
-                            contacts = segregatedContact
+                        if self.filterByEmail {
+                            if !contact.emailAddresses.isEmpty {
+                                //Ordering contacts based on alphabets in firstname
+                                contactsArray.append(contact)
+                                var key: String = "#"
+                                //If ordering has to be happening via family name change it here.
+                                if let firstLetter = contact.givenName[0..<1] , firstLetter.containsAlphabets() {
+                                    key = firstLetter.uppercased()
+                                }
+                                var contacts = [CNContact]()
+                                
+                                if let segregatedContact = self.orderedContacts[key] {
+                                    contacts = segregatedContact
+                                }
+                                contacts.append(contact)
+                                self.orderedContacts[key] = contacts
+                            }
                         }
-                        contacts.append(contact)
-                        self.orderedContacts[key] = contacts
+                        else{
+                            //Ordering contacts based on alphabets in firstname
+                            contactsArray.append(contact)
+                            var key: String = "#"
+                            //If ordering has to be happening via family name change it here.
+                            if let firstLetter = contact.givenName[0..<1] , firstLetter.containsAlphabets() {
+                                key = firstLetter.uppercased()
+                            }
+                            var contacts = [CNContact]()
+                            
+                            if let segregatedContact = self.orderedContacts[key] {
+                                contacts = segregatedContact
+                            }
+                            contacts.append(contact)
+                            self.orderedContacts[key] = contacts
+                        }
 
                     })
                     self.sortedContactKeys = Array(self.orderedContacts.keys).sorted(by: <)
